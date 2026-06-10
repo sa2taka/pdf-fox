@@ -9,6 +9,9 @@ import type { PngPage } from "./types.js";
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
 
+const PDF_BASE_DPI = 72;
+const DEFAULT_DPI = 200;
+
 const HELP = `\
 Usage: pdf-fox <input.pdf> [options]
 
@@ -19,7 +22,7 @@ Options:
   -o, --output <path>       出力先ディレクトリまたはファイルパス
                             省略時は入力ファイルと同じディレクトリ
   -p, --page <number>       変換するページ番号（省略時は全ページ）
-  -s, --scale <number>      レンダリングスケール（デフォルト: 1.5）
+  -r, --dpi <number>        解像度 DPI（デフォルト: ${DEFAULT_DPI}）
   -b, --background <color>  背景色（デフォルト: white）
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
@@ -29,14 +32,14 @@ Examples:
   pdf-fox doc.pdf -o out/             出力先ディレクトリを指定
   pdf-fox doc.pdf -p 2                2ページ目のみ変換
   pdf-fox doc.pdf -p 1 -o cover.png   1ページ目を cover.png として保存
-  pdf-fox doc.pdf --scale 2.0         2倍解像度で変換
+  pdf-fox doc.pdf --dpi 300           300 DPI で変換
 `;
 
 interface CliArgs {
   inputPath: string;
   outputOption: string | undefined;
   page: number | undefined;
-  scale: number;
+  dpi: number;
   background: string;
 }
 
@@ -50,7 +53,7 @@ function parseCliArgs(): CliArgs {
     options: {
       output:     { type: "string",  short: "o" },
       page:       { type: "string",  short: "p" },
-      scale:      { type: "string",  short: "s" },
+      dpi:        { type: "string",  short: "r" },
       background: { type: "string",  short: "b" },
       help:       { type: "boolean", short: "h" },
       version:    { type: "boolean", short: "V" },
@@ -79,16 +82,16 @@ function parseCliArgs(): CliArgs {
     exitWithError("--page は 1 以上の整数を指定してください");
   }
 
-  const scale = values.scale !== undefined ? Number(values.scale) : 1.5;
-  if (isNaN(scale) || scale <= 0) {
-    exitWithError("--scale は正の数を指定してください");
+  const dpi = values.dpi !== undefined ? Number(values.dpi) : DEFAULT_DPI;
+  if (isNaN(dpi) || dpi <= 0) {
+    exitWithError("--dpi は正の数を指定してください");
   }
 
   return {
     inputPath: positionals[0],
     outputOption: values.output,
     page,
-    scale,
+    dpi,
     background: values.background ?? "white",
   };
 }
@@ -127,7 +130,8 @@ function exitWithError(message: string): never {
 }
 
 async function run(): Promise<void> {
-  const { inputPath, outputOption, page, scale, background } = parseCliArgs();
+  const { inputPath, outputOption, page, dpi, background } = parseCliArgs();
+  const scale = dpi / PDF_BASE_DPI;
 
   let pdfBuffer: Buffer;
   try {

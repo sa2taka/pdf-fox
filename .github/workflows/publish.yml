@@ -1,0 +1,28 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Trusted Publishing (OIDC) に必須
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+
+      - run: npm test
+
+      # Trusted Publishing が設定されていれば NODE_AUTH_TOKEN 不要。
+      # --provenance で Sigstore によるアテステーションを明示的に付与する。
+      - run: npm publish --provenance --access public

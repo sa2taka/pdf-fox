@@ -23,6 +23,16 @@ export interface ConvertOptions {
    * name without its subset prefix (the part before "+").
    */
   fonts?: Record<string, string>;
+
+  /**
+   * Point the generic "serif"/"sans-serif" families at an available CJK system
+   * font so non-embedded CJK fonts render instead of showing blank boxes —
+   * mirroring how Firefox falls back to system fonts.
+   *
+   * Disable for reproducible output that doesn't depend on installed fonts.
+   * @default true
+   */
+  systemFontFallback?: boolean;
 }
 
 export interface PngPage {

@@ -31,15 +31,22 @@ Options:
   -r, --dpi <number>        解像度 DPI（デフォルト: 200）
   -b, --background <color>  背景色（デフォルト: white）
   -f, --font <name=path>    埋め込まれていないフォントの代替を指定（複数指定可）
+      --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 ```
 
 ### 埋め込まれていないフォント
 
-PDF がフォントを参照しているのに埋め込んでいない場合、その文字は空白の箱
-として描画される。PDF が使うフォント名を指定して、手元のフォントファイルを
-代替として渡す:
+PDF がフォントを参照しているのに埋め込んでいない場合、その文字は本来なら
+空白の箱になる。pdf-fox は既定で、総称 `serif`/`sans-serif` を利用可能な CJK
+システムフォント（Hiragino, Yu, MS, Noto など）に向けるため、指定なしでも
+描画される（Firefox がシステムフォントにフォールバックするのと同じ挙動）。
+インストール済みフォントに依存しない出力が欲しい場合は `--no-system-fonts`
+で無効化できる。
+
+特定のフォントを使いたい場合（システムに無い、または原本に厳密に合わせたい
+場合）は、PDF が使うフォント名を指定して手元のフォントファイルを渡す:
 
 ```bash
 npx pdf-fox input.pdf -f "MSMincho=~/Library/Fonts/msmincho.ttc"
@@ -76,6 +83,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `scale` | `number` | `1.5` | レンダリングスケール（1.0 = 72 DPI） |
 | `background` | `string` | `"white"` | 背景色（CSS カラー文字列） |
 | `fonts` | `Record<string, string>` | `{}` | 埋め込まれていないフォントの代替。PDF 内のフォント名を手元のフォントファイルパスに対応付ける |
+| `systemFontFallback` | `boolean` | `true` | `serif`/`sans-serif` を利用可能な CJK システムフォントに向け、非埋め込み CJK を描画する。フォント非依存の出力にしたい場合は無効化 |
 
 ## 動作要件
 

@@ -6,6 +6,31 @@ import type { ConvertOptions, PngPage } from "./types.js";
 const DEFAULT_SCALE = 1.5;
 const DEFAULT_BACKGROUND = "white";
 
+// CJK system fonts to alias to the generic families, in preference order across
+// macOS, Windows and common Linux installs. The first available one wins.
+const CJK_SERIF_FONTS = [
+  "Hiragino Mincho ProN",
+  "YuMincho",
+  "Yu Mincho",
+  "MS Mincho",
+  "Noto Serif CJK JP",
+  "Noto Serif JP",
+  "Source Han Serif JP",
+  "IPAexMincho",
+];
+const CJK_SANS_FONTS = [
+  "Hiragino Sans",
+  "Hiragino Kaku Gothic ProN",
+  "YuGothic",
+  "Yu Gothic",
+  "Meiryo",
+  "MS Gothic",
+  "Noto Sans CJK JP",
+  "Noto Sans JP",
+  "Source Han Sans JP",
+  "IPAexGothic",
+];
+
 interface RenderOptions {
   scale: number;
   background: string;
@@ -88,7 +113,7 @@ export async function convertPdfPageToPng(
   pageNumber: number,
   options?: ConvertOptions,
 ): Promise<PngPage> {
-  registerFonts(options?.fonts);
+  prepareFonts(options);
   const pdfData = toUint8Array(input);
   return renderPageToPng(pdfData, pageNumber, resolveOptions(options));
 }
@@ -97,7 +122,7 @@ export async function convertPdfToPng(
   input: Buffer | Uint8Array,
   options?: ConvertOptions,
 ): Promise<PngPage[]> {
-  registerFonts(options?.fonts);
+  prepareFonts(options);
   const pdfData = toUint8Array(input);
   const renderOptions = resolveOptions(options);
 
@@ -126,9 +151,33 @@ function resolveOptions(options?: ConvertOptions): RenderOptions {
   };
 }
 
-// Registers substitute fonts under the names PDF.js requests for non-embedded
-// fonts. Must run before any rendering: @napi-rs/canvas caches font lookups
-// per process, so a font registered after its first use won't take effect.
+// Sets up font substitution before rendering. Must run before any rendering:
+// @napi-rs/canvas caches font lookups per process, so fonts registered after
+// their first use won't take effect.
+function prepareFonts(options?: ConvertOptions): void {
+  if (options?.systemFontFallback !== false) {
+    applySystemFontFallback();
+  }
+  registerFonts(options?.fonts);
+}
+
+// Aliases an available CJK system font to each generic family, so PDF.js's
+// `"<fontName>", serif` / `sans-serif` fallback resolves to a font that can
+// actually draw the glyphs of non-embedded CJK fonts.
+function applySystemFontFallback(): void {
+  aliasFirstAvailable(CJK_SERIF_FONTS, "serif");
+  aliasFirstAvailable(CJK_SANS_FONTS, "sans-serif");
+}
+
+function aliasFirstAvailable(candidates: string[], generic: string): void {
+  const available = candidates.find((name) => GlobalFonts.has(name));
+  if (available) {
+    GlobalFonts.setAlias(available, generic);
+  }
+}
+
+// Registers substitute fonts under the names PDF.js requests for specific
+// non-embedded fonts.
 function registerFonts(fonts: ConvertOptions["fonts"]): void {
   if (!fonts) return;
   for (const [name, path] of Object.entries(fonts)) {

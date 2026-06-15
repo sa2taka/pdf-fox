@@ -33,14 +33,22 @@ Options:
   -r, --dpi <number>        Resolution in DPI (default: 200)
   -b, --background <color>  Background color (default: white)
   -f, --font <name=path>    Substitute font for a non-embedded font (repeatable)
+      --no-system-fonts     Disable automatic CJK system-font fallback
   -h, --help                Show help
   -V, --version             Show version
 ```
 
 ### Non-embedded fonts
 
-If a PDF references a font without embedding it, those glyphs render as blank
-boxes. Supply a local font file under the name the PDF uses:
+If a PDF references a font without embedding it, those glyphs would render as
+blank boxes. By default pdf-fox points the generic `serif`/`sans-serif`
+families at an available CJK system font (Hiragino, Yu, MS, Noto, …), so such
+text renders out of the box — just like Firefox falling back to system fonts.
+Disable this with `--no-system-fonts` for output that doesn't depend on
+installed fonts.
+
+To use a specific font (e.g. when the system has none, or to match the
+original exactly), supply a local font file under the name the PDF uses:
 
 ```bash
 npx pdf-fox input.pdf -f "MSMincho=~/Library/Fonts/msmincho.ttc"
@@ -77,6 +85,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `scale` | `number` | `1.5` | Rendering scale (1.0 = 72 DPI) |
 | `background` | `string` | `"white"` | Background color (any CSS color string) |
 | `fonts` | `Record<string, string>` | `{}` | Substitute fonts for non-embedded fonts, mapping the PDF's font name to a local font file path |
+| `systemFontFallback` | `boolean` | `true` | Point `serif`/`sans-serif` at an available CJK system font so non-embedded CJK text renders. Disable for font-independent output |
 
 ## Requirements
 

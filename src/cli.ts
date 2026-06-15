@@ -27,6 +27,7 @@ Options:
   -b, --background <color>  背景色（デフォルト: white）
   -f, --font <name=path>    PDF が埋め込んでいないフォントの代替を指定
                             （複数指定可。name は PDF 内のフォント名）
+      --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 
@@ -46,6 +47,7 @@ interface CliArgs {
   dpi: number;
   background: string;
   fonts: Record<string, string>;
+  systemFontFallback: boolean;
 }
 
 // OutputSpec はディレクトリ出力か明示ファイル出力かを区別する
@@ -61,6 +63,7 @@ function parseCliArgs(): CliArgs {
       dpi:        { type: "string",  short: "r" },
       background: { type: "string",  short: "b" },
       font:       { type: "string",  short: "f", multiple: true },
+      "no-system-fonts": { type: "boolean" },
       help:       { type: "boolean", short: "h" },
       version:    { type: "boolean", short: "V" },
     },
@@ -100,6 +103,7 @@ function parseCliArgs(): CliArgs {
     dpi,
     background: values.background ?? "white",
     fonts: parseFontMappings(values.font),
+    systemFontFallback: !values["no-system-fonts"],
   };
 }
 
@@ -160,7 +164,8 @@ function exitWithError(message: string): never {
 }
 
 async function run(): Promise<void> {
-  const { inputPath, outputOption, page, dpi, background, fonts } = parseCliArgs();
+  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback } =
+    parseCliArgs();
   const scale = dpi / PDF_BASE_DPI;
 
   let pdfBuffer: Buffer;
@@ -175,7 +180,12 @@ async function run(): Promise<void> {
   if (page !== undefined) {
     let result: PngPage;
     try {
-      result = await convertPdfPageToPng(pdfBuffer, page, { scale, background, fonts });
+      result = await convertPdfPageToPng(pdfBuffer, page, {
+        scale,
+        background,
+        fonts,
+        systemFontFallback,
+      });
     } catch (err) {
       exitWithError(err instanceof Error ? err.message : String(err));
     }
@@ -185,7 +195,7 @@ async function run(): Promise<void> {
 
   let pages: PngPage[];
   try {
-    pages = await convertPdfToPng(pdfBuffer, { scale, background, fonts });
+    pages = await convertPdfToPng(pdfBuffer, { scale, background, fonts, systemFontFallback });
   } catch (err) {
     exitWithError(err instanceof Error ? err.message : String(err));
   }

@@ -159,32 +159,47 @@ function resolveOptions(options?: ConvertOptions): RenderOptions {
   };
 }
 
-// Overrides the context's `fill` so each filled path is also stroked with the
-// fill color, thickening glyphs to approximate browser font smoothing. The
-// context object itself is left intact (not wrapped) because PDF.js / napi-rs
-// need the native context; only the `fill` method is shadowed.
-//
-// PDF.js draws glyphs in a font-size-scaled coordinate space, so the stroke
-// width is divided by the current transform scale to stay constant in output
-// pixels.
+// Thickens text by also stroking, with the fill color, whatever PDF.js fills.
+// Glyphs reach the canvas two ways: embedded fonts as filled outlines (`fill`),
+// and non-embedded/substituted fonts as `fillText` — both are overridden so the
+// effect applies to all text. The context itself is left intact (not wrapped)
+// because PDF.js / napi-rs need the native context; only these methods are
+// shadowed.
 type Canvas2DContext = ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
 type Path2DLike = Parameters<Canvas2DContext["fill"]>[0];
 
 function applyStemDarkening(context: Canvas2DContext, width: number): void {
   if (width <= 0) return;
+
   const nativeFill = context.fill.bind(context);
   context.fill = ((path?: Path2DLike) => {
     nativeFill(path as never);
-    if (!path) return;
-    const transform = context.getTransform();
-    const scale = Math.hypot(transform.a, transform.b) || 1;
-    const { strokeStyle, lineWidth } = context;
-    context.strokeStyle = context.fillStyle;
-    context.lineWidth = width / scale;
-    context.stroke(path as never);
-    context.strokeStyle = strokeStyle;
-    context.lineWidth = lineWidth;
+    if (path) emboldenStroke(context, width, () => context.stroke(path as never));
   }) as Canvas2DContext["fill"];
+
+  const nativeFillText = context.fillText.bind(context);
+  context.fillText = ((text: string, x: number, y: number, maxWidth?: number) => {
+    nativeFillText(text, x, y, maxWidth as never);
+    emboldenStroke(context, width, () =>
+      maxWidth === undefined
+        ? context.strokeText(text, x, y)
+        : context.strokeText(text, x, y, maxWidth),
+    );
+  }) as Canvas2DContext["fillText"];
+}
+
+// Strokes with the current fill color at `width` output pixels. PDF.js draws
+// glyphs in a font-size-scaled coordinate space, so the width is divided by the
+// current transform scale to stay constant in output pixels.
+function emboldenStroke(context: Canvas2DContext, width: number, stroke: () => void): void {
+  const transform = context.getTransform();
+  const scale = Math.hypot(transform.a, transform.b) || 1;
+  const { strokeStyle, lineWidth } = context;
+  context.strokeStyle = context.fillStyle;
+  context.lineWidth = width / scale;
+  stroke();
+  context.strokeStyle = strokeStyle;
+  context.lineWidth = lineWidth;
 }
 
 // Sets up font substitution before rendering. Must run before any rendering:

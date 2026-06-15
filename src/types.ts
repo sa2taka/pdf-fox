@@ -10,6 +10,19 @@ export interface ConvertOptions {
    * @default "white"
    */
   background?: string;
+
+  /**
+   * Substitute fonts for fonts that the PDF references but does not embed.
+   * Maps a font name as referenced in the PDF (e.g. "MSMincho") to a local
+   * font file path.
+   *
+   * Without a substitute, glyphs of non-embedded fonts fall back to a generic
+   * family that may lack the required glyphs (rendered as blank boxes).
+   *
+   * The key must match the name PDF.js requests, which is the PDF's BaseFont
+   * name without its subset prefix (the part before "+").
+   */
+  fonts?: Record<string, string>;
 }
 
 export interface PngPage {

@@ -32,9 +32,22 @@ Options:
   -p, --page <number>       Page number to convert (default: all pages)
   -r, --dpi <number>        Resolution in DPI (default: 200)
   -b, --background <color>  Background color (default: white)
+  -f, --font <name=path>    Substitute font for a non-embedded font (repeatable)
   -h, --help                Show help
   -V, --version             Show version
 ```
+
+### Non-embedded fonts
+
+If a PDF references a font without embedding it, those glyphs render as blank
+boxes. Supply a local font file under the name the PDF uses:
+
+```bash
+npx pdf-fox input.pdf -f "MSMincho=~/Library/Fonts/msmincho.ttc"
+```
+
+The name (`MSMincho`) is the PDF's font name without its subset prefix (the
+part before `+`). You can inspect font names with `pdffonts input.pdf`.
 
 ## Library
 
@@ -50,6 +63,11 @@ const pages = await convertPdfToPng(pdf);
 
 // Specific page
 const page = await convertPdfPageToPng(pdf, 1, { scale: 2.0 });
+
+// Substitute a non-embedded font
+const rendered = await convertPdfToPng(pdf, {
+  fonts: { MSMincho: "/path/to/msmincho.ttc" },
+});
 ```
 
 ### Options
@@ -58,6 +76,7 @@ const page = await convertPdfPageToPng(pdf, 1, { scale: 2.0 });
 |---|---|---|---|
 | `scale` | `number` | `1.5` | Rendering scale (1.0 = 72 DPI) |
 | `background` | `string` | `"white"` | Background color (any CSS color string) |
+| `fonts` | `Record<string, string>` | `{}` | Substitute fonts for non-embedded fonts, mapping the PDF's font name to a local font file path |
 
 ## Requirements
 

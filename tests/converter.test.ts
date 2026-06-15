@@ -90,3 +90,15 @@ describe("convertPdfPageToPng", () => {
     expect(page.data.subarray(0, 8)).toEqual(pngSignature);
   });
 });
+
+describe("fonts オプション", () => {
+  it("存在しないフォントパスを指定するとエラーになる", async () => {
+    const pdf = loadSamplePdf();
+
+    const conversion = convertPdfPageToPng(pdf, 1, {
+      fonts: { MSMincho: "/no/such/font.ttc" },
+    });
+
+    await expect(conversion).rejects.toThrow(/MSMincho/);
+  });
+});

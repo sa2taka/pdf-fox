@@ -1,10 +1,15 @@
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { createRequire } from "module";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { ConvertOptions, PngPage } from "./types.js";
 
 const DEFAULT_SCALE = 1.5;
 const DEFAULT_BACKGROUND = "white";
+
+interface RenderOptions {
+  scale: number;
+  background: string;
+}
 
 // Use createRequire so Node.js resolves paths from node_modules,
 // not relative to this source file.
@@ -41,7 +46,7 @@ function loadPdfDocument(pdfData: Uint8Array) {
 async function renderPageToPng(
   pdfData: Uint8Array,
   pageNumber: number,
-  options: Required<ConvertOptions>,
+  options: RenderOptions,
 ): Promise<PngPage> {
   const loadingTask = loadPdfDocument(pdfData);
   const pdfDocument = await loadingTask.promise;
@@ -83,23 +88,24 @@ export async function convertPdfPageToPng(
   pageNumber: number,
   options?: ConvertOptions,
 ): Promise<PngPage> {
-  const resolvedOptions = resolveOptions(options);
+  registerFonts(options?.fonts);
   const pdfData = toUint8Array(input);
-  return renderPageToPng(pdfData, pageNumber, resolvedOptions);
+  return renderPageToPng(pdfData, pageNumber, resolveOptions(options));
 }
 
 export async function convertPdfToPng(
   input: Buffer | Uint8Array,
   options?: ConvertOptions,
 ): Promise<PngPage[]> {
-  const resolvedOptions = resolveOptions(options);
+  registerFonts(options?.fonts);
   const pdfData = toUint8Array(input);
+  const renderOptions = resolveOptions(options);
 
   const pageCount = await getPageCount(pdfData);
 
   return Promise.all(
     Array.from({ length: pageCount }, (_, i) =>
-      renderPageToPng(pdfData, i + 1, resolvedOptions),
+      renderPageToPng(pdfData, i + 1, renderOptions),
     ),
   );
 }
@@ -113,11 +119,23 @@ async function getPageCount(pdfData: Uint8Array): Promise<number> {
   return count;
 }
 
-function resolveOptions(options?: ConvertOptions): Required<ConvertOptions> {
+function resolveOptions(options?: ConvertOptions): RenderOptions {
   return {
     scale: options?.scale ?? DEFAULT_SCALE,
     background: options?.background ?? DEFAULT_BACKGROUND,
   };
+}
+
+// Registers substitute fonts under the names PDF.js requests for non-embedded
+// fonts. Must run before any rendering: @napi-rs/canvas caches font lookups
+// per process, so a font registered after its first use won't take effect.
+function registerFonts(fonts: ConvertOptions["fonts"]): void {
+  if (!fonts) return;
+  for (const [name, path] of Object.entries(fonts)) {
+    if (GlobalFonts.registerFromPath(path, name) === null) {
+      throw new Error(`Failed to register font "${name}" from: ${path}`);
+    }
+  }
 }
 
 function toUint8Array(input: Buffer | Uint8Array): Uint8Array {

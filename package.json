@@ -1,6 +1,6 @@
 {
   "name": "pdf-fox",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PDF to PNG converter using PDF.js",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,8 +29,16 @@
     "converter",
     "pdfjs"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "sa2taka <sa2taka@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sa2taka/pdf-fox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sa2taka/pdf-fox/issues"
+  },
+  "homepage": "https://github.com/sa2taka/pdf-fox#readme",
   "dependencies": {
     "@napi-rs/canvas": "^1.0.0",
     "pdfjs-dist": "^6.0.227"

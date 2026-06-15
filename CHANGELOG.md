@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0]
+
+### Added
+
+- `fonts` option / `-f, --font <name=path>` CLI flag to substitute fonts that a
+  PDF references but does not embed.
+- Automatic CJK system-font fallback: the generic `serif`/`sans-serif` families
+  are pointed at an available CJK system font (Hiragino, Yu, MS, Noto, …) so
+  non-embedded CJK text renders instead of showing blank boxes, mirroring how
+  Firefox falls back to system fonts. Disable with `systemFontFallback: false`
+  or `--no-system-fonts`.
+
+### Fixed
+
+- Non-embedded CID fonts that reference predefined Adobe CMaps (e.g.
+  `UniJIS-UTF16-H`) failed to render. The bundled pdfjs-dist CMaps are now
+  passed via `cMapUrl`, so such fonts render correctly.
+
+## [1.0.0]
+
+### Added
+
+- `convertPdfToPng` / `convertPdfPageToPng` library API.
+- `pdf-fox` CLI with `--output`, `--page`, `--dpi`, and `--background` options.

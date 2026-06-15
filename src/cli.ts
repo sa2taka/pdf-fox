@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "util";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "fs";
-import { resolve, basename, extname, dirname, join } from "path";
+import { resolve, dirname, join } from "path";
 import { homedir } from "os";
 import { createRequire } from "module";
 import { convertPdfToPng, convertPdfPageToPng } from "./index.js";
@@ -32,7 +32,7 @@ Options:
   -V, --version             バージョンを表示
 
 Examples:
-  pdf-fox doc.pdf                     全ページ変換 → doc-1.png, doc-2.png ...
+  pdf-fox doc.pdf                     全ページ変換 → 1.png, 2.png ...
   pdf-fox doc.pdf -o out/             出力先ディレクトリを指定
   pdf-fox doc.pdf -p 2                2ページ目のみ変換
   pdf-fox doc.pdf -p 1 -o cover.png   1ページ目を cover.png として保存
@@ -52,7 +52,7 @@ interface CliArgs {
 
 // OutputSpec はディレクトリ出力か明示ファイル出力かを区別する
 type OutputSpec =
-  | { kind: "directory"; dir: string; stem: string }
+  | { kind: "directory"; dir: string }
   | { kind: "file"; path: string };
 
 function parseCliArgs(): CliArgs {
@@ -131,17 +131,15 @@ function resolveHome(path: string): string {
 }
 
 function resolveOutputSpec(inputPath: string, outputOption: string | undefined): OutputSpec {
-  const stem = basename(inputPath, extname(inputPath));
-
   if (!outputOption) {
-    return { kind: "directory", dir: dirname(resolve(inputPath)), stem };
+    return { kind: "directory", dir: dirname(resolve(inputPath)) };
   }
 
   const resolved = resolve(outputOption);
 
   // 末尾スラッシュ or 既存ディレクトリはディレクトリ出力として扱う
   if (outputOption.endsWith("/") || (existsSync(resolved) && statSync(resolved).isDirectory())) {
-    return { kind: "directory", dir: resolved, stem };
+    return { kind: "directory", dir: resolved };
   }
 
   return { kind: "file", path: resolved };
@@ -149,7 +147,7 @@ function resolveOutputSpec(inputPath: string, outputOption: string | undefined):
 
 function buildOutputPath(spec: OutputSpec, pageNumber: number): string {
   if (spec.kind === "file") return spec.path;
-  return join(spec.dir, `${spec.stem}-${pageNumber}.png`);
+  return join(spec.dir, `${pageNumber}.png`);
 }
 
 function writePage(outputPath: string, page: PngPage): void {

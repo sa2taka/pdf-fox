@@ -11,14 +11,17 @@ npm install pdf-fox
 ## CLI
 
 ```bash
-# 全ページ変換
+# 全ページ変換 → 入力と同じ場所に 1.png, 2.png, ...
 npx pdf-fox input.pdf
 
-# 出力先ディレクトリを指定
+# 出力先ディレクトリを指定 → output/1.png, output/2.png, ...
 npx pdf-fox input.pdf -o output/
 
-# 特定ページのみ
+# 特定ページのみ → 2.png
 npx pdf-fox input.pdf -p 2
+
+# 1ページを明示ファイル名で保存
+npx pdf-fox input.pdf -p 1 -o cover.png
 
 # 解像度指定（デフォルト: 200 DPI）
 npx pdf-fox input.pdf --dpi 300

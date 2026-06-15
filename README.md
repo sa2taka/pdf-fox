@@ -13,14 +13,17 @@ npm install pdf-fox
 ## CLI
 
 ```bash
-# Convert all pages
+# Convert all pages → 1.png, 2.png, ... next to the input
 npx pdf-fox input.pdf
 
-# Specify output directory
+# Specify output directory → output/1.png, output/2.png, ...
 npx pdf-fox input.pdf -o output/
 
-# Convert a specific page
+# Convert a specific page → 2.png
 npx pdf-fox input.pdf -p 2
+
+# Save a single page to an explicit file
+npx pdf-fox input.pdf -p 1 -o cover.png
 
 # Set resolution (default: 200 DPI)
 npx pdf-fox input.pdf --dpi 300

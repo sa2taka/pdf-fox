@@ -34,6 +34,7 @@ const CJK_SANS_FONTS = [
 interface RenderOptions {
   scale: number;
   background: string;
+  stemDarkening: number;
 }
 
 // Use createRequire so Node.js resolves paths from node_modules,
@@ -89,6 +90,8 @@ async function renderPageToPng(
 
     context.fillStyle = options.background;
     context.fillRect(0, 0, viewport.width, viewport.height);
+
+    applyStemDarkening(context, options.stemDarkening);
 
     // canvasContext only (canvas: null) — PDF.js uses the provided 2D context
     // directly without trying to call canvas.getContext() internally.
@@ -152,7 +155,36 @@ function resolveOptions(options?: ConvertOptions): RenderOptions {
   return {
     scale: options?.scale ?? DEFAULT_SCALE,
     background: options?.background ?? DEFAULT_BACKGROUND,
+    stemDarkening: Math.max(0, options?.stemDarkening ?? 0),
   };
+}
+
+// Overrides the context's `fill` so each filled path is also stroked with the
+// fill color, thickening glyphs to approximate browser font smoothing. The
+// context object itself is left intact (not wrapped) because PDF.js / napi-rs
+// need the native context; only the `fill` method is shadowed.
+//
+// PDF.js draws glyphs in a font-size-scaled coordinate space, so the stroke
+// width is divided by the current transform scale to stay constant in output
+// pixels.
+type Canvas2DContext = ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
+type Path2DLike = Parameters<Canvas2DContext["fill"]>[0];
+
+function applyStemDarkening(context: Canvas2DContext, width: number): void {
+  if (width <= 0) return;
+  const nativeFill = context.fill.bind(context);
+  context.fill = ((path?: Path2DLike) => {
+    nativeFill(path as never);
+    if (!path) return;
+    const transform = context.getTransform();
+    const scale = Math.hypot(transform.a, transform.b) || 1;
+    const { strokeStyle, lineWidth } = context;
+    context.strokeStyle = context.fillStyle;
+    context.lineWidth = width / scale;
+    context.stroke(path as never);
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = lineWidth;
+  }) as Canvas2DContext["fill"];
 }
 
 // Sets up font substitution before rendering. Must run before any rendering:

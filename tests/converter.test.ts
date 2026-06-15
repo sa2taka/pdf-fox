@@ -102,3 +102,23 @@ describe("fonts オプション", () => {
     await expect(conversion).rejects.toThrow(/MSMincho/);
   });
 });
+
+describe("stemDarkening オプション", () => {
+  it("テキストを太らせると出力が変わる", async () => {
+    const pdf = loadSamplePdf();
+
+    const plain = await convertPdfPageToPng(pdf, 1, { stemDarkening: 0 });
+    const darkened = await convertPdfPageToPng(pdf, 1, { stemDarkening: 1 });
+
+    expect(darkened.data.equals(plain.data)).toBe(false);
+  });
+
+  it("デフォルトでは太らせない（stemDarkening 0 と同じ）", async () => {
+    const pdf = loadSamplePdf();
+
+    const byDefault = await convertPdfPageToPng(pdf, 1);
+    const explicit = await convertPdfPageToPng(pdf, 1, { stemDarkening: 0 });
+
+    expect(byDefault.data.equals(explicit.data)).toBe(true);
+  });
+});

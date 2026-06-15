@@ -35,9 +35,16 @@ Options:
   -b, --background <color>  背景色（デフォルト: white）
   -f, --font <name=path>    埋め込まれていないフォントの代替を指定（複数指定可）
       --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
+      --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 ```
+
+### 文字が細く見えるとき
+
+PDF.js は字形のアウトラインを忠実に塗るため、ブラウザ（macOS では追加の
+フォントスムージングが効く）より細く見えることがある。`--bold`（ライブラリでは
+`stemDarkening`）で太らせられる。例: `--bold 0.6`。
 
 ### 埋め込まれていないフォント
 
@@ -87,6 +94,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `background` | `string` | `"white"` | 背景色（CSS カラー文字列） |
 | `fonts` | `Record<string, string>` | `{}` | 埋め込まれていないフォントの代替。PDF 内のフォント名を手元のフォントファイルパスに対応付ける |
 | `systemFontFallback` | `boolean` | `true` | `serif`/`sans-serif` を利用可能な CJK システムフォントに向け、非埋め込み CJK を描画する。フォント非依存の出力にしたい場合は無効化 |
+| `stemDarkening` | `number` | `0` | 字形アウトラインを指定幅（出力px）でストロークしてテキストを太らせる。ブラウザのフォントスムージング相当。`0` で無効。`0.5`〜`1.0` 推奨 |
 
 ## 動作要件
 

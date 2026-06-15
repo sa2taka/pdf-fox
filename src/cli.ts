@@ -28,6 +28,7 @@ Options:
   -f, --font <name=path>    PDF が埋め込んでいないフォントの代替を指定
                             （複数指定可。name は PDF 内のフォント名）
       --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
+      --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 
@@ -48,6 +49,7 @@ interface CliArgs {
   background: string;
   fonts: Record<string, string>;
   systemFontFallback: boolean;
+  stemDarkening: number;
 }
 
 // OutputSpec はディレクトリ出力か明示ファイル出力かを区別する
@@ -64,6 +66,7 @@ function parseCliArgs(): CliArgs {
       background: { type: "string",  short: "b" },
       font:       { type: "string",  short: "f", multiple: true },
       "no-system-fonts": { type: "boolean" },
+      bold:       { type: "string" },
       help:       { type: "boolean", short: "h" },
       version:    { type: "boolean", short: "V" },
     },
@@ -96,6 +99,11 @@ function parseCliArgs(): CliArgs {
     exitWithError("--dpi は正の数を指定してください");
   }
 
+  const stemDarkening = values.bold !== undefined ? Number(values.bold) : 0;
+  if (isNaN(stemDarkening) || stemDarkening < 0) {
+    exitWithError("--bold は 0 以上の数を指定してください");
+  }
+
   return {
     inputPath: positionals[0],
     outputOption: values.output,
@@ -104,6 +112,7 @@ function parseCliArgs(): CliArgs {
     background: values.background ?? "white",
     fonts: parseFontMappings(values.font),
     systemFontFallback: !values["no-system-fonts"],
+    stemDarkening,
   };
 }
 
@@ -162,7 +171,7 @@ function exitWithError(message: string): never {
 }
 
 async function run(): Promise<void> {
-  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback } =
+  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback, stemDarkening } =
     parseCliArgs();
   const scale = dpi / PDF_BASE_DPI;
 
@@ -183,6 +192,7 @@ async function run(): Promise<void> {
         background,
         fonts,
         systemFontFallback,
+        stemDarkening,
       });
     } catch (err) {
       exitWithError(err instanceof Error ? err.message : String(err));
@@ -193,7 +203,13 @@ async function run(): Promise<void> {
 
   let pages: PngPage[];
   try {
-    pages = await convertPdfToPng(pdfBuffer, { scale, background, fonts, systemFontFallback });
+    pages = await convertPdfToPng(pdfBuffer, {
+      scale,
+      background,
+      fonts,
+      systemFontFallback,
+      stemDarkening,
+    });
   } catch (err) {
     exitWithError(err instanceof Error ? err.message : String(err));
   }

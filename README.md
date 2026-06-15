@@ -37,9 +37,16 @@ Options:
   -b, --background <color>  Background color (default: white)
   -f, --font <name=path>    Substitute font for a non-embedded font (repeatable)
       --no-system-fonts     Disable automatic CJK system-font fallback
+      --bold <px>           Thicken text by this width in px (e.g. 0.6; default: 0)
   -h, --help                Show help
   -V, --version             Show version
 ```
+
+### Text looks too thin?
+
+PDF.js renders glyph outlines faithfully, so text can look lighter than in a
+browser, which applies extra font smoothing on macOS. Thicken it with `--bold`
+(or the `stemDarkening` option), e.g. `--bold 0.6`.
 
 ### Non-embedded fonts
 
@@ -89,6 +96,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `background` | `string` | `"white"` | Background color (any CSS color string) |
 | `fonts` | `Record<string, string>` | `{}` | Substitute fonts for non-embedded fonts, mapping the PDF's font name to a local font file path |
 | `systemFontFallback` | `boolean` | `true` | Point `serif`/`sans-serif` at an available CJK system font so non-embedded CJK text renders. Disable for font-independent output |
+| `stemDarkening` | `number` | `0` | Thicken text by stroking glyph outlines with this width in output pixels, approximating browser font smoothing. `0` disables; try `0.5`–`1.0` |
 
 ## Requirements
 

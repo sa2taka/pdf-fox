@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0]
+
+### Added
+
+- `stemDarkening` option / `--bold <px>` CLI flag to thicken text by stroking
+  glyph outlines, approximating the font smoothing browsers apply on macOS
+  (PDF.js renders faithful outlines, which can look thinner). Disabled by
+  default.
+
 ## [1.2.0]
 
 ### Changed

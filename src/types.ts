@@ -33,6 +33,18 @@ export interface ConvertOptions {
    * @default true
    */
   systemFontFallback?: boolean;
+
+  /**
+   * Thicken text by stroking each filled glyph outline with this width, in
+   * output pixels. Approximates the "stem darkening" font smoothing that
+   * browsers apply on macOS, where text looks heavier than a faithful outline
+   * fill. `0` disables it; try `0.5`–`1.0`.
+   *
+   * Applies to every filled path, but for solid fills the same-color outline is
+   * effectively invisible — the visible effect is on text.
+   * @default 0
+   */
+  stemDarkening?: number;
 }
 
 export interface PngPage {

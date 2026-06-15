@@ -191,15 +191,18 @@ function applyStemDarkening(context: Canvas2DContext, width: number): void {
 // Strokes with the current fill color at `width` output pixels. PDF.js draws
 // glyphs in a font-size-scaled coordinate space, so the width is divided by the
 // current transform scale to stay constant in output pixels.
+//
+// save()/restore() is used instead of manually restoring strokeStyle/lineWidth,
+// because reading back strokeStyle does not always round-trip — leaving PDF.js's
+// stroke color corrupted, which turned subsequent colored rules black.
 function emboldenStroke(context: Canvas2DContext, width: number, stroke: () => void): void {
   const transform = context.getTransform();
   const scale = Math.hypot(transform.a, transform.b) || 1;
-  const { strokeStyle, lineWidth } = context;
+  context.save();
   context.strokeStyle = context.fillStyle;
   context.lineWidth = width / scale;
   stroke();
-  context.strokeStyle = strokeStyle;
-  context.lineWidth = lineWidth;
+  context.restore();
 }
 
 // Sets up font substitution before rendering. Must run before any rendering:

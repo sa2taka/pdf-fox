@@ -14,20 +14,36 @@ GlobalWorkerOptions.workerSrc = `file://${workerPath}`;
 
 // pdfjs-dist's NodeBinaryDataFactory uses fs.readFile(url) which accepts plain
 // file paths but not "file://" string URLs. Passing the directory path directly
-// (with trailing slash) lets fs.readFile resolve font files correctly.
-const standardFontsDir = require
-  .resolve("pdfjs-dist/standard_fonts/FoxitSerif.pfb")
-  .replace("FoxitSerif.pfb", "");
-const STANDARD_FONT_DATA_URL = standardFontsDir;
+// (with trailing slash) lets fs.readFile resolve bundled assets correctly.
+const STANDARD_FONT_DATA_URL = resolveBundledDir(
+  "pdfjs-dist/standard_fonts/FoxitSerif.pfb",
+  "FoxitSerif.pfb",
+);
+// CMaps map character codes to glyphs for CID-keyed fonts that reference
+// predefined Adobe CMaps (e.g. UniJIS-UTF16-H) instead of embedding their own.
+// Without these, non-embedded CJK fonts fail to render.
+const CMAP_URL = resolveBundledDir(
+  "pdfjs-dist/cmaps/UniJIS-UTF16-H.bcmap",
+  "UniJIS-UTF16-H.bcmap",
+);
+
+function loadPdfDocument(pdfData: Uint8Array) {
+  // PDF.js transfers the ArrayBuffer to the worker thread (detaching it), so we
+  // must pass a fresh copy per getDocument call to allow parallel rendering.
+  return getDocument({
+    data: new Uint8Array(pdfData),
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
+    cMapUrl: CMAP_URL,
+    cMapPacked: true,
+  });
+}
 
 async function renderPageToPng(
   pdfData: Uint8Array,
   pageNumber: number,
   options: Required<ConvertOptions>,
 ): Promise<PngPage> {
-  // PDF.js transfers the ArrayBuffer to the worker thread (detaching it), so we
-  // must pass a fresh copy per getDocument call to allow parallel rendering.
-  const loadingTask = getDocument({ data: new Uint8Array(pdfData), standardFontDataUrl: STANDARD_FONT_DATA_URL });
+  const loadingTask = loadPdfDocument(pdfData);
   const pdfDocument = await loadingTask.promise;
 
   try {
@@ -89,7 +105,7 @@ export async function convertPdfToPng(
 }
 
 async function getPageCount(pdfData: Uint8Array): Promise<number> {
-  const loadingTask = getDocument({ data: new Uint8Array(pdfData), standardFontDataUrl: STANDARD_FONT_DATA_URL });
+  const loadingTask = loadPdfDocument(pdfData);
   const pdfDocument = await loadingTask.promise;
   const count = pdfDocument.numPages;
   await pdfDocument.cleanup();
@@ -106,4 +122,9 @@ function resolveOptions(options?: ConvertOptions): Required<ConvertOptions> {
 
 function toUint8Array(input: Buffer | Uint8Array): Uint8Array {
   return new Uint8Array(input);
+}
+
+// Resolves the directory of a bundled pdfjs-dist asset as a trailing-slash path.
+function resolveBundledDir(modulePath: string, fileName: string): string {
+  return require.resolve(modulePath).replace(fileName, "");
 }

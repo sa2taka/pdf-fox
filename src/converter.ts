@@ -1,6 +1,6 @@
 import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { createRequire } from "module";
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument, GlobalWorkerOptions, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { ConvertOptions, PngPage } from "./types.js";
 
 const DEFAULT_SCALE = 1.5;
@@ -65,6 +65,10 @@ function loadPdfDocument(pdfData: Uint8Array) {
     standardFontDataUrl: STANDARD_FONT_DATA_URL,
     cMapUrl: CMAP_URL,
     cMapPacked: true,
+    // Silence PDF.js's internal warnings (e.g. "OffscreenCanvas is not
+    // supported", emitted in Node where OffscreenCanvas is absent). They are
+    // noise for this tool; real failures still reject the loading task.
+    verbosity: VerbosityLevel.ERRORS,
   });
 }
 

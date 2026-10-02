@@ -103,6 +103,47 @@ describe("fonts オプション", () => {
   });
 });
 
+describe("verbosity オプション", () => {
+  it("既定では PDF.js の警告を出さない", async () => {
+    const pdf = loadSamplePdf();
+    const warnings = await captureConsole("warn", () => convertPdfPageToPng(pdf, 1));
+
+    expect(warnings).toEqual([]);
+  });
+
+  it("warnings を指定すると PDF.js の警告を出す", async () => {
+    const pdf = loadSamplePdf();
+    const warnings = await captureConsole("warn", () =>
+      convertPdfPageToPng(pdf, 1, { verbosity: "warnings" }),
+    );
+
+    expect(warnings.some((message) => message.includes("Indexing all PDF objects"))).toBe(true);
+  });
+
+  it("infos を指定すると PDF.js の info を出す", async () => {
+    const pdf = loadSamplePdf();
+    const infos = await captureConsole("info", () =>
+      convertPdfPageToPng(pdf, 1, { verbosity: "infos" }),
+    );
+
+    expect(infos.some((message) => message.includes("getOperatorList"))).toBe(true);
+  });
+});
+
+async function captureConsole(method: "warn" | "info", run: () => Promise<unknown>): Promise<string[]> {
+  const messages: string[] = [];
+  const original = console[method];
+  console[method] = (...args: unknown[]) => {
+    messages.push(args.map(String).join(" "));
+  };
+  try {
+    await run();
+    return messages;
+  } finally {
+    console[method] = original;
+  }
+}
+
 describe("stemDarkening オプション", () => {
   it("テキストを太らせると出力が変わる", async () => {
     const pdf = loadSamplePdf();

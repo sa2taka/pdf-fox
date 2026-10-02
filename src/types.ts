@@ -1,3 +1,7 @@
+export const PDFJS_VERBOSITY_LEVELS = ["errors", "warnings", "infos"] as const;
+
+export type PdfJsVerbosity = (typeof PDFJS_VERBOSITY_LEVELS)[number];
+
 export interface ConvertOptions {
   /**
    * Rendering scale. 1.0 = original size, 2.0 = double resolution.
@@ -46,6 +50,15 @@ export interface ConvertOptions {
    * @default 0
    */
   stemDarkening?: number;
+
+  /**
+   * How much of PDF.js's own diagnostics to print.
+   * `errors` prints nothing unless rendering fails.
+   * `warnings` also prints PDF.js warnings.
+   * `infos` adds PDF.js timing and parser notes.
+   * @default "errors"
+   */
+  verbosity?: PdfJsVerbosity;
 }
 
 export interface PngPage {

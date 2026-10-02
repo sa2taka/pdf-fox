@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Added
+
+- `verbosity` option and `--verbosity <errors|warnings|infos>` CLI flag. The
+  default stays `errors`, so PDF.js warnings are printed only when requested.
+
 ## [1.3.2]
 
 ### Fixed

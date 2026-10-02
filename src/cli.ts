@@ -5,7 +5,7 @@ import { resolve, dirname, join } from "path";
 import { homedir } from "os";
 import { createRequire } from "module";
 import { convertPdfToPng, convertPdfPageToPng } from "./index.js";
-import type { PngPage } from "./types.js";
+import { PDFJS_VERBOSITY_LEVELS, type PdfJsVerbosity, type PngPage } from "./types.js";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
@@ -29,6 +29,7 @@ Options:
                             （複数指定可。name は PDF 内のフォント名）
       --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
       --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
+      --verbosity <level>   PDF.js のログレベル（errors, warnings, infos。デフォルト: errors）
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 
@@ -50,6 +51,7 @@ interface CliArgs {
   fonts: Record<string, string>;
   systemFontFallback: boolean;
   stemDarkening: number;
+  verbosity: PdfJsVerbosity;
 }
 
 // OutputSpec はディレクトリ出力か明示ファイル出力かを区別する
@@ -67,6 +69,7 @@ function parseCliArgs(): CliArgs {
       font:       { type: "string",  short: "f", multiple: true },
       "no-system-fonts": { type: "boolean" },
       bold:       { type: "string" },
+      verbosity:  { type: "string" },
       help:       { type: "boolean", short: "h" },
       version:    { type: "boolean", short: "V" },
     },
@@ -104,6 +107,11 @@ function parseCliArgs(): CliArgs {
     exitWithError("--bold は 0 以上の数を指定してください");
   }
 
+  const verbosity = values.verbosity ?? "errors";
+  if (!isPdfJsVerbosity(verbosity)) {
+    exitWithError("--verbosity は errors, warnings, infos のいずれかを指定してください");
+  }
+
   return {
     inputPath: positionals[0],
     outputOption: values.output,
@@ -113,7 +121,12 @@ function parseCliArgs(): CliArgs {
     fonts: parseFontMappings(values.font),
     systemFontFallback: !values["no-system-fonts"],
     stemDarkening,
+    verbosity,
   };
+}
+
+function isPdfJsVerbosity(value: string): value is PdfJsVerbosity {
+  return PDFJS_VERBOSITY_LEVELS.some((level) => level === value);
 }
 
 // Parses repeated `--font name=path` values into a name → path map.
@@ -171,7 +184,7 @@ function exitWithError(message: string): never {
 }
 
 async function run(): Promise<void> {
-  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback, stemDarkening } =
+  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback, stemDarkening, verbosity } =
     parseCliArgs();
   const scale = dpi / PDF_BASE_DPI;
 
@@ -193,6 +206,7 @@ async function run(): Promise<void> {
         fonts,
         systemFontFallback,
         stemDarkening,
+        verbosity,
       });
     } catch (err) {
       exitWithError(err instanceof Error ? err.message : String(err));
@@ -209,6 +223,7 @@ async function run(): Promise<void> {
       fonts,
       systemFontFallback,
       stemDarkening,
+      verbosity,
     });
   } catch (err) {
     exitWithError(err instanceof Error ? err.message : String(err));

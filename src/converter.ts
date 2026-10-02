@@ -1,7 +1,7 @@
 import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { createRequire } from "module";
 import { getDocument, GlobalWorkerOptions, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
-import type { ConvertOptions, PngPage } from "./types.js";
+import type { ConvertOptions, PdfJsVerbosity, PngPage } from "./types.js";
 
 const DEFAULT_SCALE = 1.5;
 const DEFAULT_BACKGROUND = "white";
@@ -31,10 +31,17 @@ const CJK_SANS_FONTS = [
   "IPAexGothic",
 ];
 
+const VERBOSITY_LEVEL = {
+  errors: VerbosityLevel.ERRORS,
+  warnings: VerbosityLevel.WARNINGS,
+  infos: VerbosityLevel.INFOS,
+} satisfies Record<PdfJsVerbosity, number>;
+
 interface RenderOptions {
   scale: number;
   background: string;
   stemDarkening: number;
+  verbosity: PdfJsVerbosity;
 }
 
 // Use createRequire so Node.js resolves paths from node_modules,
@@ -58,7 +65,7 @@ const CMAP_URL = resolveBundledDir(
   "UniJIS-UTF16-H.bcmap",
 );
 
-function loadPdfDocument(pdfData: Uint8Array) {
+function loadPdfDocument(pdfData: Uint8Array, verbosity: PdfJsVerbosity) {
   // PDF.js transfers the ArrayBuffer to the worker thread (detaching it), so we
   // must pass a fresh copy per getDocument call to allow parallel rendering.
   return getDocument({
@@ -66,10 +73,7 @@ function loadPdfDocument(pdfData: Uint8Array) {
     standardFontDataUrl: STANDARD_FONT_DATA_URL,
     cMapUrl: CMAP_URL,
     cMapPacked: true,
-    // Silence PDF.js's internal warnings (e.g. "OffscreenCanvas is not
-    // supported", emitted in Node where OffscreenCanvas is absent). They are
-    // noise for this tool; real failures still reject the loading task.
-    verbosity: VerbosityLevel.ERRORS,
+    verbosity: VERBOSITY_LEVEL[verbosity],
   });
 }
 
@@ -78,7 +82,7 @@ async function renderPageToPng(
   pageNumber: number,
   options: RenderOptions,
 ): Promise<PngPage> {
-  const loadingTask = loadPdfDocument(pdfData);
+  const loadingTask = loadPdfDocument(pdfData, options.verbosity);
   const pdfDocument = await loadingTask.promise;
 
   try {
@@ -133,7 +137,7 @@ export async function convertPdfToPng(
   const pdfData = toUint8Array(input);
   const renderOptions = resolveOptions(options);
 
-  const pageCount = await getPageCount(pdfData);
+  const pageCount = await getPageCount(pdfData, renderOptions.verbosity);
 
   return Promise.all(
     Array.from({ length: pageCount }, (_, i) =>
@@ -142,8 +146,8 @@ export async function convertPdfToPng(
   );
 }
 
-async function getPageCount(pdfData: Uint8Array): Promise<number> {
-  const loadingTask = loadPdfDocument(pdfData);
+async function getPageCount(pdfData: Uint8Array, verbosity: PdfJsVerbosity): Promise<number> {
+  const loadingTask = loadPdfDocument(pdfData, verbosity);
   const pdfDocument = await loadingTask.promise;
   const count = pdfDocument.numPages;
   await pdfDocument.cleanup();
@@ -156,6 +160,7 @@ function resolveOptions(options?: ConvertOptions): RenderOptions {
     scale: options?.scale ?? DEFAULT_SCALE,
     background: options?.background ?? DEFAULT_BACKGROUND,
     stemDarkening: Math.max(0, options?.stemDarkening ?? 0),
+    verbosity: options?.verbosity ?? "errors",
   };
 }
 

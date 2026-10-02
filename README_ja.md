@@ -36,6 +36,7 @@ Options:
   -f, --font <name=path>    埋め込まれていないフォントの代替を指定（複数指定可）
       --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
       --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
+      --verbosity <level>   PDF.js のログレベル（errors, warnings, infos。デフォルト: errors）
   -h, --help                ヘルプを表示
   -V, --version             バージョンを表示
 ```
@@ -95,6 +96,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `fonts` | `Record<string, string>` | `{}` | 埋め込まれていないフォントの代替。PDF 内のフォント名を手元のフォントファイルパスに対応付ける |
 | `systemFontFallback` | `boolean` | `true` | `serif`/`sans-serif` を利用可能な CJK システムフォントに向け、非埋め込み CJK を描画する。フォント非依存の出力にしたい場合は無効化 |
 | `stemDarkening` | `number` | `0` | 字形アウトラインを指定幅（出力px）でストロークしてテキストを太らせる。ブラウザのフォントスムージング相当。`0` で無効。`0.5`〜`1.0` 推奨 |
+| `verbosity` | `"errors" \| "warnings" \| "infos"` | `"errors"` | PDF.js のログレベル。`warnings` で警告も、`infos` で情報ログも出す |
 
 ## 動作要件
 

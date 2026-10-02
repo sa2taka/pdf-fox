@@ -38,6 +38,7 @@ Options:
   -f, --font <name=path>    Substitute font for a non-embedded font (repeatable)
       --no-system-fonts     Disable automatic CJK system-font fallback
       --bold <px>           Thicken text by this width in px (e.g. 0.6; default: 0)
+      --verbosity <level>   PDF.js diagnostics: errors, warnings, or infos (default: errors)
   -h, --help                Show help
   -V, --version             Show version
 ```
@@ -97,6 +98,7 @@ const rendered = await convertPdfToPng(pdf, {
 | `fonts` | `Record<string, string>` | `{}` | Substitute fonts for non-embedded fonts, mapping the PDF's font name to a local font file path |
 | `systemFontFallback` | `boolean` | `true` | Point `serif`/`sans-serif` at an available CJK system font so non-embedded CJK text renders. Disable for font-independent output |
 | `stemDarkening` | `number` | `0` | Thicken text by stroking glyph outlines with this width in output pixels, approximating browser font smoothing. `0` disables; try `0.5`–`1.0` |
+| `verbosity` | `"errors" \| "warnings" \| "infos"` | `"errors"` | How much of PDF.js's diagnostics to print. `warnings` and `infos` surface messages that `errors` hides |
 
 ## Requirements
 

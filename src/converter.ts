@@ -64,6 +64,11 @@ const CMAP_URL = resolveBundledDir(
   "pdfjs-dist/cmaps/UniJIS-UTF16-H.bcmap",
   "UniJIS-UTF16-H.bcmap",
 );
+// pdfjs-dist ships its wasm decoders in one directory. PDF.js appends the
+// filename it needs, so resolving jbig2.wasm here also covers openjpeg.wasm,
+// qcms_bg.wasm, and quickjs-eval.wasm. Without wasmUrl, wasm-decoded images
+// are dropped.
+const WASM_URL = resolveBundledDir("pdfjs-dist/wasm/jbig2.wasm", "jbig2.wasm");
 
 function loadPdfDocument(pdfData: Uint8Array, verbosity: PdfJsVerbosity) {
   // PDF.js transfers the ArrayBuffer to the worker thread (detaching it), so we
@@ -73,6 +78,7 @@ function loadPdfDocument(pdfData: Uint8Array, verbosity: PdfJsVerbosity) {
     standardFontDataUrl: STANDARD_FONT_DATA_URL,
     cMapUrl: CMAP_URL,
     cMapPacked: true,
+    wasmUrl: WASM_URL,
     verbosity: VERBOSITY_LEVEL[verbosity],
   });
 }

@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { describe, it, expect } from "vitest";
 import { convertPdfToPng, convertPdfPageToPng } from "../src/index.js";
 
@@ -90,6 +91,26 @@ describe("convertPdfPageToPng", () => {
     expect(page.data.subarray(0, 8)).toEqual(pngSignature);
   });
 });
+
+describe("wasm で復号する画像", () => {
+  it("CCITTFaxDecode の ImageMask を描く", async () => {
+    const pdf = readFileSync(resolve(__dirname, "fixtures/ccitt-image-mask.pdf"));
+
+    const page = await convertPdfPageToPng(pdf, 1, { scale: 1 });
+
+    // 64pt page at scale 1. The mask is a black square on white; the corner is outside it.
+    expect(await redAt(page.data, 2, 2)).toBeGreaterThan(250);
+    expect(await redAt(page.data, 32, 32)).toBeLessThan(5);
+  });
+});
+
+async function redAt(png: Buffer, x: number, y: number): Promise<number> {
+  const image = await loadImage(png);
+  const canvas = createCanvas(image.width, image.height);
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0);
+  return context.getImageData(x, y, 1, 1).data[0];
+}
 
 describe("fonts オプション", () => {
   it("存在しないフォントパスを指定するとエラーになる", async () => {

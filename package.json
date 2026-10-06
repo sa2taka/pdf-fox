@@ -1,6 +1,6 @@
 {
   "name": "pdf-fox",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "PDF to PNG converter using PDF.js",
   "type": "module",
   "main": "./dist/index.js",

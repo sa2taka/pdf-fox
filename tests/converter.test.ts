@@ -147,7 +147,7 @@ describe("verbosity オプション", () => {
       convertPdfPageToPng(pdf, 1, { verbosity: "infos" }),
     );
 
-    expect(infos.some((message) => message.includes("getOperatorList"))).toBe(true);
+    expect(infos.some((message) => message.startsWith("Info:"))).toBe(true);
   });
 });
 

@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1]
+
+### Changed
+
+- `pdfjs-dist` from 6.0.227 to 6.4.299.
+- `@napi-rs/canvas` from 1.0.0 to 1.0.12.
+
 ## [1.5.0]
 
 ### Fixed

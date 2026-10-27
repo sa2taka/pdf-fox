@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0]
+
+### Added
+
+- `fallbackFonts` sets the `serif`, `sans-serif`, and `monospace` substitutes
+  individually, from a family Canvas already lists or from a local font file.
+  `faceIndex` selects a face in a collection. The first assignment in a
+  process is kept; a different later assignment fails.
+
+### Fixed
+
+- Non-embedded CJK fonts that PDF.js treats as `monospace` (every glyph width
+  is the same) no longer drop Japanese glyphs when Canvas can draw a CJK font.
+  Automatic fallback now covers `monospace` as well as `serif` and `sans-serif`.
+  A Japanese monospace family is preferred. When none is visible to Canvas, a
+  proportional CJK sans is used instead.
+
 ## [1.5.1]
 
 ### Changed

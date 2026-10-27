@@ -1,35 +1,11 @@
 import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { createRequire } from "module";
 import { getDocument, GlobalWorkerOptions, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { prepareGenericFontFallback } from "./generic-font-fallback.js";
 import type { ConvertOptions, PdfJsVerbosity, PngPage } from "./types.js";
 
 const DEFAULT_SCALE = 1.5;
 const DEFAULT_BACKGROUND = "white";
-
-// CJK system fonts to alias to the generic families, in preference order across
-// macOS, Windows and common Linux installs. The first available one wins.
-const CJK_SERIF_FONTS = [
-  "Hiragino Mincho ProN",
-  "YuMincho",
-  "Yu Mincho",
-  "MS Mincho",
-  "Noto Serif CJK JP",
-  "Noto Serif JP",
-  "Source Han Serif JP",
-  "IPAexMincho",
-];
-const CJK_SANS_FONTS = [
-  "Hiragino Sans",
-  "Hiragino Kaku Gothic ProN",
-  "YuGothic",
-  "Yu Gothic",
-  "Meiryo",
-  "MS Gothic",
-  "Noto Sans CJK JP",
-  "Noto Sans JP",
-  "Source Han Sans JP",
-  "IPAexGothic",
-];
 
 const VERBOSITY_LEVEL = {
   errors: VerbosityLevel.ERRORS,
@@ -216,29 +192,12 @@ function emboldenStroke(context: Canvas2DContext, width: number, stroke: () => v
   context.restore();
 }
 
-// Sets up font substitution before rendering. Must run before any rendering:
-// @napi-rs/canvas caches font lookups per process, so fonts registered after
-// their first use won't take effect.
+// Generic-family aliases first, then PDF font names. Both must be in place
+// before the first draw that uses them. Canvas does not drop a generic alias
+// once it is set, so the fallback module keeps the first assignment.
 function prepareFonts(options?: ConvertOptions): void {
-  if (options?.systemFontFallback !== false) {
-    applySystemFontFallback();
-  }
+  prepareGenericFontFallback(options);
   registerFonts(options?.fonts);
-}
-
-// Aliases an available CJK system font to each generic family, so PDF.js's
-// `"<fontName>", serif` / `sans-serif` fallback resolves to a font that can
-// actually draw the glyphs of non-embedded CJK fonts.
-function applySystemFontFallback(): void {
-  aliasFirstAvailable(CJK_SERIF_FONTS, "serif");
-  aliasFirstAvailable(CJK_SANS_FONTS, "sans-serif");
-}
-
-function aliasFirstAvailable(candidates: string[], generic: string): void {
-  const available = candidates.find((name) => GlobalFonts.has(name));
-  if (available) {
-    GlobalFonts.setAlias(available, generic);
-  }
 }
 
 // Registers substitute fonts under the names PDF.js requests for specific

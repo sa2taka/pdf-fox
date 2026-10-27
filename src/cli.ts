@@ -27,7 +27,7 @@ Options:
   -b, --background <color>  背景色（デフォルト: white）
   -f, --font <name=path>    PDF が埋め込んでいないフォントの代替を指定
                             （複数指定可。name は PDF 内のフォント名）
-      --no-system-fonts     CJK システムフォントへの自動フォールバックを無効化
+      --no-system-fonts     serif / sans-serif / monospace の CJK 自動フォールバックを無効化
       --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
       --verbosity <level>   PDF.js のログレベル（errors, warnings, infos。デフォルト: errors）
   -h, --help                ヘルプを表示

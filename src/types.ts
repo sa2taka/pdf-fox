@@ -1,3 +1,5 @@
+import type { DocumentInitParameters } from "pdfjs-dist/types/src/display/api.js";
+
 export const PDFJS_VERBOSITY_LEVELS = ["errors", "warnings", "infos"] as const;
 
 export type PdfJsVerbosity = (typeof PDFJS_VERBOSITY_LEVELS)[number];
@@ -27,6 +29,28 @@ export type FallbackFont =
       faceIndex?: number;
     };
 
+/**
+ * Keys pdf-fox always sets on `getDocument`. Pass them through the dedicated
+ * ConvertOptions fields (or rely on built-in asset URLs); values here are ignored.
+ */
+export type OwnedPdfJsDocumentParam =
+  | "data"
+  | "url"
+  | "range"
+  | "standardFontDataUrl"
+  | "cMapUrl"
+  | "cMapPacked"
+  | "wasmUrl"
+  | "verbosity"
+  | "useSystemFonts";
+
+/**
+ * Extra parameters forwarded to PDF.js `getDocument`.
+ * Use for options pdf-fox does not expose as first-class fields
+ * (`password`, `enableXfa`, `stopAtErrors`, `maxImageSize`, …).
+ */
+export type PdfJsDocumentParams = Omit<DocumentInitParameters, OwnedPdfJsDocumentParam>;
+
 export interface ConvertOptions {
   /**
    * Rendering scale. 1.0 = original size, 2.0 = double resolution.
@@ -51,6 +75,20 @@ export interface ConvertOptions {
    * It does not select a later face in a collection.
    */
   fonts?: Record<string, string>;
+
+  /**
+   * When `true`, non-embedded fonts use PDF.js's system-font path (the web /
+   * Firefox default). When `false`, PDF.js keeps its Node default of bundled
+   * substitute font data. That bundled path can remap glyphs incorrectly for
+   * some non-embedded CID fonts (for example Times-like faces with
+   * Identity-H / ToUnicode).
+   *
+   * Distinct from `systemFontFallback`, which only assigns Canvas generic
+   * families (`serif` / `sans-serif` / `monospace`) to CJK fonts. Output then
+   * depends more on fonts installed on the host.
+   * @default true
+   */
+  useSystemFonts?: boolean;
 
   /**
    * Point the generic families at a CJK font Canvas can draw, so non-embedded
@@ -105,6 +143,14 @@ export interface ConvertOptions {
    * @default "errors"
    */
   verbosity?: PdfJsVerbosity;
+
+  /**
+   * Extra parameters passed through to PDF.js `getDocument`.
+   * First-class ConvertOptions (`useSystemFonts`, `verbosity`, …) and the
+   * built-in CMap / standard-font / wasm URLs always win over the same keys
+   * here. See {@link PdfJsDocumentParams}.
+   */
+  documentParams?: PdfJsDocumentParams;
 }
 
 export interface PngPage {

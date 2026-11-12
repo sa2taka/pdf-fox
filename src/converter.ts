@@ -1,11 +1,18 @@
 import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import { createRequire } from "module";
 import { getDocument, GlobalWorkerOptions, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { DocumentInitParameters } from "pdfjs-dist/types/src/display/api.js";
 import { prepareGenericFontFallback } from "./generic-font-fallback.js";
-import type { ConvertOptions, PdfJsVerbosity, PngPage } from "./types.js";
+import type {
+  ConvertOptions,
+  OwnedPdfJsDocumentParam,
+  PdfJsVerbosity,
+  PngPage,
+} from "./types.js";
 
 const DEFAULT_SCALE = 1.5;
 const DEFAULT_BACKGROUND = "white";
+const DEFAULT_USE_SYSTEM_FONTS = true;
 
 const VERBOSITY_LEVEL = {
   errors: VerbosityLevel.ERRORS,
@@ -13,11 +20,25 @@ const VERBOSITY_LEVEL = {
   infos: VerbosityLevel.INFOS,
 } satisfies Record<PdfJsVerbosity, number>;
 
+const OWNED_DOCUMENT_PARAMS = [
+  "data",
+  "url",
+  "range",
+  "standardFontDataUrl",
+  "cMapUrl",
+  "cMapPacked",
+  "wasmUrl",
+  "verbosity",
+  "useSystemFonts",
+] as const satisfies readonly OwnedPdfJsDocumentParam[];
+
 interface RenderOptions {
   scale: number;
   background: string;
   stemDarkening: number;
   verbosity: PdfJsVerbosity;
+  useSystemFonts: boolean;
+  documentParams: ConvertOptions["documentParams"];
 }
 
 // Use createRequire so Node.js resolves paths from node_modules,
@@ -46,17 +67,42 @@ const CMAP_URL = resolveBundledDir(
 // are dropped.
 const WASM_URL = resolveBundledDir("pdfjs-dist/wasm/jbig2.wasm", "jbig2.wasm");
 
-function loadPdfDocument(pdfData: Uint8Array, verbosity: PdfJsVerbosity) {
+function loadPdfDocument(
+  pdfData: Uint8Array,
+  options: Pick<RenderOptions, "verbosity" | "useSystemFonts" | "documentParams">,
+) {
+  return getDocument(buildDocumentInitParameters(pdfData, options));
+}
+
+/** @internal Exported for unit tests that assert getDocument wiring. */
+export function buildDocumentInitParameters(
+  pdfData: Uint8Array,
+  options: Pick<RenderOptions, "verbosity" | "useSystemFonts" | "documentParams">,
+): DocumentInitParameters {
   // PDF.js transfers the ArrayBuffer to the worker thread (detaching it), so we
   // must pass a fresh copy per getDocument call to allow parallel rendering.
-  return getDocument({
+  return {
+    ...withoutOwnedDocumentParams(options.documentParams),
     data: new Uint8Array(pdfData),
     standardFontDataUrl: STANDARD_FONT_DATA_URL,
     cMapUrl: CMAP_URL,
     cMapPacked: true,
     wasmUrl: WASM_URL,
-    verbosity: VERBOSITY_LEVEL[verbosity],
-  });
+    verbosity: VERBOSITY_LEVEL[options.verbosity],
+    useSystemFonts: options.useSystemFonts,
+  };
+}
+
+function withoutOwnedDocumentParams(
+  params: ConvertOptions["documentParams"],
+): ConvertOptions["documentParams"] {
+  if (!params) return undefined;
+
+  const cleaned: Record<string, unknown> = { ...params };
+  for (const key of OWNED_DOCUMENT_PARAMS) {
+    delete cleaned[key];
+  }
+  return cleaned as ConvertOptions["documentParams"];
 }
 
 async function renderPageToPng(
@@ -64,7 +110,7 @@ async function renderPageToPng(
   pageNumber: number,
   options: RenderOptions,
 ): Promise<PngPage> {
-  const loadingTask = loadPdfDocument(pdfData, options.verbosity);
+  const loadingTask = loadPdfDocument(pdfData, options);
   const pdfDocument = await loadingTask.promise;
 
   try {
@@ -119,7 +165,7 @@ export async function convertPdfToPng(
   const pdfData = toUint8Array(input);
   const renderOptions = resolveOptions(options);
 
-  const pageCount = await getPageCount(pdfData, renderOptions.verbosity);
+  const pageCount = await getPageCount(pdfData, renderOptions);
 
   return Promise.all(
     Array.from({ length: pageCount }, (_, i) =>
@@ -128,8 +174,11 @@ export async function convertPdfToPng(
   );
 }
 
-async function getPageCount(pdfData: Uint8Array, verbosity: PdfJsVerbosity): Promise<number> {
-  const loadingTask = loadPdfDocument(pdfData, verbosity);
+async function getPageCount(
+  pdfData: Uint8Array,
+  options: Pick<RenderOptions, "verbosity" | "useSystemFonts" | "documentParams">,
+): Promise<number> {
+  const loadingTask = loadPdfDocument(pdfData, options);
   const pdfDocument = await loadingTask.promise;
   const count = pdfDocument.numPages;
   await pdfDocument.cleanup();
@@ -143,6 +192,8 @@ function resolveOptions(options?: ConvertOptions): RenderOptions {
     background: options?.background ?? DEFAULT_BACKGROUND,
     stemDarkening: Math.max(0, options?.stemDarkening ?? 0),
     verbosity: options?.verbosity ?? "errors",
+    useSystemFonts: options?.useSystemFonts ?? DEFAULT_USE_SYSTEM_FONTS,
+    documentParams: options?.documentParams,
   };
 }
 

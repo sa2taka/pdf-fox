@@ -28,6 +28,7 @@ Options:
   -f, --font <name=path>    PDF が埋め込んでいないフォントの代替を指定
                             （複数指定可。name は PDF 内のフォント名）
       --no-system-fonts     serif / sans-serif / monospace の CJK 自動フォールバックを無効化
+      --no-use-system-fonts PDF.js のシステムフォント経路を無効化し、同梱代替フォントを使う
       --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
       --verbosity <level>   PDF.js のログレベル（errors, warnings, infos。デフォルト: errors）
   -h, --help                ヘルプを表示
@@ -50,6 +51,7 @@ interface CliArgs {
   background: string;
   fonts: Record<string, string>;
   systemFontFallback: boolean;
+  useSystemFonts: boolean;
   stemDarkening: number;
   verbosity: PdfJsVerbosity;
 }
@@ -68,6 +70,7 @@ function parseCliArgs(): CliArgs {
       background: { type: "string",  short: "b" },
       font:       { type: "string",  short: "f", multiple: true },
       "no-system-fonts": { type: "boolean" },
+      "no-use-system-fonts": { type: "boolean" },
       bold:       { type: "string" },
       verbosity:  { type: "string" },
       help:       { type: "boolean", short: "h" },
@@ -120,6 +123,7 @@ function parseCliArgs(): CliArgs {
     background: values.background ?? "white",
     fonts: parseFontMappings(values.font),
     systemFontFallback: !values["no-system-fonts"],
+    useSystemFonts: !values["no-use-system-fonts"],
     stemDarkening,
     verbosity,
   };
@@ -184,8 +188,18 @@ function exitWithError(message: string): never {
 }
 
 async function run(): Promise<void> {
-  const { inputPath, outputOption, page, dpi, background, fonts, systemFontFallback, stemDarkening, verbosity } =
-    parseCliArgs();
+  const {
+    inputPath,
+    outputOption,
+    page,
+    dpi,
+    background,
+    fonts,
+    systemFontFallback,
+    useSystemFonts,
+    stemDarkening,
+    verbosity,
+  } = parseCliArgs();
   const scale = dpi / PDF_BASE_DPI;
 
   let pdfBuffer: Buffer;
@@ -196,18 +210,20 @@ async function run(): Promise<void> {
   }
 
   const outputSpec = resolveOutputSpec(inputPath, outputOption);
+  const convertOptions = {
+    scale,
+    background,
+    fonts,
+    systemFontFallback,
+    useSystemFonts,
+    stemDarkening,
+    verbosity,
+  };
 
   if (page !== undefined) {
     let result: PngPage;
     try {
-      result = await convertPdfPageToPng(pdfBuffer, page, {
-        scale,
-        background,
-        fonts,
-        systemFontFallback,
-        stemDarkening,
-        verbosity,
-      });
+      result = await convertPdfPageToPng(pdfBuffer, page, convertOptions);
     } catch (err) {
       exitWithError(err instanceof Error ? err.message : String(err));
     }
@@ -217,14 +233,7 @@ async function run(): Promise<void> {
 
   let pages: PngPage[];
   try {
-    pages = await convertPdfToPng(pdfBuffer, {
-      scale,
-      background,
-      fonts,
-      systemFontFallback,
-      stemDarkening,
-      verbosity,
-    });
+    pages = await convertPdfToPng(pdfBuffer, convertOptions);
   } catch (err) {
     exitWithError(err instanceof Error ? err.message : String(err));
   }

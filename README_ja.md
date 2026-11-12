@@ -35,6 +35,7 @@ Options:
   -b, --background <color>  背景色（デフォルト: white）
   -f, --font <name=path>    埋め込まれていないフォントの代替を指定（複数指定可）
       --no-system-fonts     serif / sans-serif / monospace の CJK 自動フォールバックを無効化
+      --no-use-system-fonts PDF.js のシステムフォント経路を無効化し、同梱代替フォントを使う
       --bold <px>           テキストを太らせる幅 px（例: 0.6。デフォルト: 0=無効）
       --verbosity <level>   PDF.js のログレベル（errors, warnings, infos。デフォルト: errors）
   -h, --help                ヘルプを表示
@@ -47,7 +48,9 @@ PDF.js は字形のアウトラインを忠実に塗るため、ブラウザ（m
 
 ### 埋め込まれていないフォント
 
-PDF がフォントを参照しているのに埋め込んでいない場合、その文字は本来なら空白の箱になる。pdf-fox は既定で、`serif`、`sans-serif`、`monospace` を利用可能な CJK システムフォント（Hiragino、Yu、MS、Noto など）に向ける。インストール済みフォントに依存しない出力が欲しいときは `--no-system-fonts` で無効化できる。
+pdf-fox は既定で PDF.js の `useSystemFonts` を `true` にする（Firefox の Web 既定と同じ）。同梱の代替フォント経路は、一部の非埋め込み CID フォントでグリフ対応を誤ることがある。以前の Node 向け経路に戻すときは `useSystemFonts: false` または `--no-use-system-fonts` を使う。
+
+これとは別に、Canvas の `serif`、`sans-serif`、`monospace` を利用可能な CJK システムフォント（Hiragino、Yu、MS、Noto など）に向け、非埋め込み CJK が空白の箱にならないようにする。インストール済みフォントに依存しない出力が欲しいときは `--no-system-fonts` / `systemFontFallback: false` で無効化できる。
 
 特定のフォントを使いたいときは、PDF が使うフォント名で手元のファイルを渡す:
 
@@ -85,6 +88,11 @@ const pinned = await convertPdfPageToPng(pdf, 1, {
     monospace: { family: "Noto Sans CJK JP" },
   },
 });
+
+// PDF.js の getDocument へ追加パラメータを渡す（password, enableXfa など）
+const protectedPdf = await convertPdfToPng(pdf, {
+  documentParams: { password: "secret" },
+});
 ```
 
 ### オプション
@@ -94,10 +102,12 @@ const pinned = await convertPdfPageToPng(pdf, 1, {
 | `scale` | `number` | `1.5` | レンダリングスケール（1.0 = 72 DPI） |
 | `background` | `string` | `"white"` | 背景色（CSS カラー文字列） |
 | `fonts` | `Record<string, string>` | `{}` | PDF のフォント名で手元のファイルを登録する（先頭フェイス）。その名前は総称ファミリーより先に試される |
-| `systemFontFallback` | `boolean` | `true` | `serif`、`sans-serif`、`monospace` を Canvas が描ける CJK フォントに向ける。`monospace` は日本語の等幅を優先し、無ければプロポーショナルな CJK ゴシックを使う。プロセス内で最初の割り当てが残る。フォント非依存の出力では無効化する |
+| `useSystemFonts` | `boolean` | `true` | PDF.js の非埋め込みフォント経路。`true` は Firefox と同様にシステムフォントを使う。`false` は同梱代替フォントを使う（一部 CID フォントで誤対応しうる）。`systemFontFallback` とは別設定 |
+| `systemFontFallback` | `boolean` | `true` | Canvas の `serif`、`sans-serif`、`monospace` を CJK フォントに向ける。`monospace` は日本語の等幅を優先し、無ければプロポーショナルな CJK ゴシックを使う。プロセス内で最初の割り当てが残る。フォント非依存の出力では無効化する |
 | `fallbackFonts` | `{ family }` または `{ path, faceIndex? }` の一部 |  | 総称ファミリーを個別に上書きする。`systemFontFallback: false` でも有効。プロセス内の制約は上記 |
 | `stemDarkening` | `number` | `0` | 字形アウトラインを指定幅（出力px）でストロークしてテキストを太らせる。ブラウザのフォントスムージング相当。`0` で無効。`0.5`〜`1.0` 推奨 |
 | `verbosity` | `"errors" \| "warnings" \| "infos"` | `"errors"` | PDF.js のログレベル。`warnings` で警告も、`infos` で情報ログも出す |
+| `documentParams` | `PdfJsDocumentParams` |  | PDF.js の `getDocument` へ渡す追加オプション（`password`、`enableXfa`、`stopAtErrors` など）。第一級オプションと組み込みの CMap / 標準フォント / wasm URL が同名キーより優先される |
 
 ## 動作要件
 

@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0]
+
+### Added
+
+- `useSystemFonts` option and `--no-use-system-fonts` CLI flag. Defaults to
+  `true` so non-embedded fonts follow PDF.js's system-font path (Firefox's web
+  default). Set `false` to keep the previous Node bundled-substitute path.
+  Independent of `systemFontFallback`.
+- `documentParams` forwards extra PDF.js `getDocument` options (`password`,
+  `enableXfa`, `stopAtErrors`, …). First-class ConvertOptions and built-in
+  asset URLs always win over the same keys.
+
+### Fixed
+
+- Non-embedded CID fonts that were remapped incorrectly through PDF.js's
+  bundled substitute fonts (observed with Times-like Identity-H faces) now
+  render via the system-font path by default.
+
 ## [1.6.0]
 
 ### Added

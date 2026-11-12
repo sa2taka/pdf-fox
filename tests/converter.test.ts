@@ -3,6 +3,7 @@ import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { describe, it, expect } from "vitest";
+import { buildDocumentInitParameters } from "../src/converter.js";
 import { convertPdfToPng, convertPdfPageToPng } from "../src/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -164,6 +165,71 @@ async function captureConsole(method: "warn" | "info", run: () => Promise<unknow
     console[method] = original;
   }
 }
+
+describe("useSystemFonts / documentParams", () => {
+  it("省略時は useSystemFonts: true と同じ出力になる", async () => {
+    const pdf = loadSamplePdf();
+
+    const byDefault = await convertPdfPageToPng(pdf, 1);
+    const explicit = await convertPdfPageToPng(pdf, 1, { useSystemFonts: true });
+
+    expect(byDefault.data.equals(explicit.data)).toBe(true);
+  });
+
+  it("useSystemFonts の指定が getDocument に渡る", () => {
+    expect(
+      buildDocumentInitParameters(new Uint8Array([1]), {
+        verbosity: "errors",
+        useSystemFonts: true,
+        documentParams: undefined,
+      }).useSystemFonts,
+    ).toBe(true);
+    expect(
+      buildDocumentInitParameters(new Uint8Array([1]), {
+        verbosity: "errors",
+        useSystemFonts: false,
+        documentParams: undefined,
+      }).useSystemFonts,
+    ).toBe(false);
+  });
+
+  it("documentParams の追加オプションを転送し、第一級キーは上書きされない", () => {
+    const params = buildDocumentInitParameters(new Uint8Array([1, 2, 3]), {
+      verbosity: "warnings",
+      useSystemFonts: true,
+      // JS callers may still pass owned keys; they must not win.
+      documentParams: {
+        password: "secret",
+        enableXfa: true,
+        useSystemFonts: false,
+        verbosity: 99,
+      } as Parameters<typeof buildDocumentInitParameters>[1]["documentParams"],
+    });
+
+    expect(params.password).toBe("secret");
+    expect(params.enableXfa).toBe(true);
+    expect(params.useSystemFonts).toBe(true);
+    expect(params.verbosity).not.toBe(99);
+  });
+
+  it("useSystemFonts: false でも描画できる", async () => {
+    const pdf = loadSamplePdf();
+
+    const page = await convertPdfPageToPng(pdf, 1, { useSystemFonts: false });
+
+    expect(page.data.length).toBeGreaterThan(0);
+  });
+
+  it("documentParams を付けても描画できる", async () => {
+    const pdf = loadSamplePdf();
+
+    const page = await convertPdfPageToPng(pdf, 1, {
+      documentParams: { stopAtErrors: false, enableXfa: true },
+    });
+
+    expect(page.data.length).toBeGreaterThan(0);
+  });
+});
 
 describe("stemDarkening オプション", () => {
   it("テキストを太らせると出力が変わる", async () => {

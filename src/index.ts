@@ -4,6 +4,8 @@ export type {
   ConvertOptions,
   FallbackFont,
   GenericFontFamily,
+  OwnedPdfJsDocumentParam,
+  PdfJsDocumentParams,
   PdfJsVerbosity,
   PngPage,
 } from "./types.js";
